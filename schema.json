@@ -1,0 +1,8 @@
+{
+    "name": "MySchemaJson",
+    "tuples_limit": 3,
+    "structure": {
+        "CLASSTEAMS": ["NAME", "AGE", "POL", "CLASS"],
+        "STUDENT": ["NAME", "CURS"]
+    }
+}
