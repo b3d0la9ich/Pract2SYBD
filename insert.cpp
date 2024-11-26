@@ -12,7 +12,7 @@ bool TableExist(const string& tableName, Node* tableHead) {
 }
 
 bool isloker(const string& tableName, const string& schemeName) {
-    string baseDir = "/home/b3d0la9a/don/Pract1SYBD/" + schemeName + "/" + tableName;
+    string baseDir = "/home/b3d0la9a/don/Pract2SYBD/" + schemeName + "/" + tableName;
     string lockFile = baseDir + "/" + (tableName + "_lock.txt");
 
     if (!fs::exists(lockFile)) {
@@ -33,7 +33,7 @@ bool isloker(const string& tableName, const string& schemeName) {
 }
 
 void loker(const string& tableName, const string& schemeName) {
-    string baseDir = "/home/b3d0la9a/don/Pract1SYBD/" + schemeName + "/" + tableName;
+    string baseDir = "/home/b3d0la9a/don/Pract2SYBD/" + schemeName + "/" + tableName;
     string lockFile = baseDir + "/" + (tableName + "_lock.txt");
 
     if (!fs::exists(lockFile)) {
@@ -86,7 +86,7 @@ int findCsvFileCount(const TableJson& json_table, const string& tableName) {
     int csvNumber = 1;
 
     while (true) {
-        string csvFile = "/home/b3d0la9a/don/Pract1SYBD/" + json_table.Name + "/" + tableName + "/" + (to_string(csvNumber) + ".csv");
+        string csvFile = "/home/b3d0la9a/don/Pract2SYBD/" + json_table.Name + "/" + tableName + "/" + (to_string(csvNumber) + ".csv");
 
         // Проверяем, существует ли файл
         ifstream fileIn(csvFile);
@@ -171,7 +171,7 @@ void insert(const string& command, TableJson json_table) {
     loker(tableName, json_table.Name);
 
     int currentPK;
-    string PKFile = "/home/b3d0la9a/don/Pract1SYBD/" + json_table.Name + "/" + tableName + "/" + (tableName + "_pk_sequence.txt");
+    string PKFile = "/home/b3d0la9a/don/Pract2SYBD/" + json_table.Name + "/" + tableName + "/" + (tableName + "_pk_sequence.txt");
     ifstream fileIn(PKFile);
     if (!fileIn.is_open()) {
         cerr << "Не удалось открыть файл.\n";
@@ -193,7 +193,7 @@ void insert(const string& command, TableJson json_table) {
     // Логика для определения количества существующих файлов
     int csvNumber = findCsvFileCount(json_table, tableName);
 
-    string baseDir = "/home/b3d0la9a/don/Pract1SYBD/" + json_table.Name;
+    string baseDir = "/home/b3d0la9a/don/Pract2SYBD/" + json_table.Name;
 
     // Используем новую функцию для создания нового CSV файла, если нужно
     createNewCsvFile(baseDir, tableName, csvNumber, json_table);

@@ -85,7 +85,7 @@ bool deleteRowsFromTable(const string& tableName, const string& column, const st
 
     // Ищем все CSV файлы
     while (true) {
-        fs::path filePath = fs::path("/home/b3d0la9a/don/Pract1SYBD") / json_table.Name / tableName / (to_string(amountCsv) + ".csv");
+        fs::path filePath = fs::path("/home/b3d0la9a/don/Pract2SYBD") / json_table.Name / tableName / (to_string(amountCsv) + ".csv");
         ifstream file(filePath);
         if (!file.is_open()) {
             break;
@@ -96,7 +96,7 @@ bool deleteRowsFromTable(const string& tableName, const string& column, const st
 
     // Просматриваем все CSV файлы
     for (size_t iCsv = 1; iCsv < amountCsv; iCsv++) {
-        string filePath = "/home/b3d0la9a/don/Pract1SYBD/" + json_table.Name + "/" + tableName + "/" + (to_string(iCsv) + ".csv");
+        string filePath = "/home/b3d0la9a/don/Pract2SYBD/" + json_table.Name + "/" + tableName + "/" + (to_string(iCsv) + ".csv");
         rapidcsv::Document doc(filePath);
 
         int columnIndex = doc.GetColumnIdx(column);
