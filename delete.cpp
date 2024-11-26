@@ -125,49 +125,58 @@ bool deleteRowsFromTable(const string& tableName, const string& column, const st
 }
 
 
-void delet(const string& command, const TableJson& json_table) {
-    istringstream iss(command);
-    string indication;
+bool delet(const string& command, const TableJson& json_table) {
+    try {
+        istringstream iss(command);
+        string indication;
 
-    // Проверка и разбор команды DELETE FROM
-    if (!(iss >> indication && indication == "DELETE" && iss >> indication && indication == "FROM")) {
-        cerr << "Некорректная команда.\n";
-        return;
+        // Проверка и разбор команды DELETE FROM
+        if (!(iss >> indication && indication == "DELETE" && iss >> indication && indication == "FROM")) {
+            cerr << "Некорректная команда.\n";
+            return false;
+        }
+
+        string tableName;
+        iss >> tableName;
+        if (!TableExist(tableName, json_table.Tablehead)) {
+            cerr << "Такой таблицы нет.\n";
+            return false;
+        }
+
+        // Разбор второй части команды: WHERE <table.column> = '<value>'
+        string whereCmd;
+        if (!(iss >> whereCmd && whereCmd == "WHERE")) {
+            cerr << "Некорректная команда.\n";
+            return false;
+        }
+
+        string table, column, value;
+        if (!parseWhereClause(iss, table, column, value, tableName, json_table)) {
+            return false;  // Ошибка уже выведена в parseWhereClause
+        }
+
+        // Проверка на блокировку таблицы
+        if (isloker(tableName, json_table.Name)) {
+            cerr << "Таблица заблокирована.\n";
+            return false;
+        }
+        loker(tableName, json_table.Name); // Блокировка таблицы
+
+        // Попытка удалить строки из всех CSV файлов таблицы
+        bool deletedStr = deleteRowsFromTable(tableName, column, value, json_table);
+
+        // Разблокировка таблицы
+        loker(tableName, json_table.Name);
+
+        if (!deletedStr) {
+            cout << "Указанное значение не найдено.\n";
+            return false;
+        }
+
+        return true; // Успешное выполнение
+    } catch (const std::exception& e) {
+        cerr << "Ошибка выполнения DELETE: " << e.what() << "\n";
+        return false; // В случае исключения возвращаем false
     }
-
-    string tableName;
-    iss >> tableName;
-    if (!TableExist(tableName, json_table.Tablehead)) {
-        cerr << "Такой таблицы нет.\n";
-        return;
-    }
-
-    // Разбор второй части команды: WHERE <table.column> = '<value>'
-    string whereCmd;
-    if (!(iss >> whereCmd && whereCmd == "WHERE")) {
-        cerr << "Некорректная команда.\n";
-        return;
-    }
-
-    string table, column, value;
-    if (!parseWhereClause(iss, table, column, value, tableName, json_table)) {
-        return;  // Ошибка уже выведена в parseWhereClause
-    }
-
-    // Проверка на блокировку таблицы
-    if (isloker(tableName, json_table.Name)) {
-        cerr << "Таблица заблокирована.\n";
-        return;
-    }
-    loker(tableName, json_table.Name); // Блокировка таблицы
-
-    // Попытка удалить строки из всех CSV файлов таблицы
-    bool deletedStr = deleteRowsFromTable(tableName, column, value, json_table);
-
-    if (!deletedStr) {
-        cout << "Указанное значение не найдено.\n";
-    }
-
-    // Разблокировка таблицы
-    loker(tableName, json_table.Name);
 }
+

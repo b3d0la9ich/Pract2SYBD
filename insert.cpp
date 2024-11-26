@@ -130,99 +130,119 @@ void createNewCsvFile(const string& baseDir, const string& tableName, int& csvNu
     }
 }
 
-void insert(const string& command, TableJson json_table) {
-    istringstream iss(command);
-    string slovo;
-    iss >> slovo >> slovo;
+bool insert(const string& command, TableJson& json_table) {
+    try {
+        istringstream iss(command);
+        string slovo;
 
-    if (slovo != "INTO") {
-        cerr << "Некорректная команда.\n";
-        return;
-    }
+        // Проверяем ключевые слова "INSERT INTO"
+        iss >> slovo >> slovo;
+        if (slovo != "INTO") {
+            cerr << "Некорректная команда: отсутствует 'INTO'.\n";
+            return false;
+        }
 
-    string tableName;
-    iss >> tableName;
-    if (!TableExist(tableName, json_table.Tablehead)) {
-        cerr << "Такой таблицы нет.\n";
-        return;
-    }
+        // Читаем имя таблицы
+        string tableName;
+        iss >> tableName;
+        if (!TableExist(tableName, json_table.Tablehead)) {
+            cerr << "Ошибка: таблица '" << tableName << "' не существует.\n";
+            return false;
+        }
 
-    iss >> slovo;
-    if (slovo != "VALUES") {
-        cerr << "Некорректная команда.\n";
-        return;
-    }
+        // Проверяем ключевое слово "VALUES"
+        iss >> slovo;
+        if (slovo != "VALUES") {
+            cerr << "Некорректная команда: отсутствует 'VALUES'.\n";
+            return false;
+        }
 
-    string values;
-    while (iss >> slovo) {
-        values += slovo;
-    }
+        // Считываем значения
+        string values;
+        while (iss >> slovo) {
+            values += slovo;
+        }
+        if (values.empty() || values.front() != '(' || values.back() != ')') {
+            cerr << "Ошибка: значения должны быть в формате (…).\n";
+            return false;
+        }
 
-    if (values.front() != '(' || values.back() != ')') {
-        cerr << "Некорректная команда.\n";
-        return;
-    }
+        // Проверяем, заблокирована ли таблица
+        if (isloker(tableName, json_table.Name)) {
+            cerr << "Ошибка: таблица '" << tableName << "' заблокирована.\n";
+            return false;
+        }
 
-    if (isloker(tableName, json_table.Name)) {
-        cerr << "Таблица заблокирована.\n";
-        return;
-    }
+        // Устанавливаем блокировку
+        loker(tableName, json_table.Name);
 
-    loker(tableName, json_table.Name);
+        // Работа с Primary Key
+        int currentPK;
+        string PKFile = "/home/b3d0la9a/don/Pract2SYBD/" + json_table.Name + "/" + tableName + "/" + (tableName + "_pk_sequence.txt");
 
-    int currentPK;
-    string PKFile = "/home/b3d0la9a/don/Pract2SYBD/" + json_table.Name + "/" + tableName + "/" + (tableName + "_pk_sequence.txt");
-    ifstream fileIn(PKFile);
-    if (!fileIn.is_open()) {
-        cerr << "Не удалось открыть файл.\n";
-        return;
-    }
+        ifstream fileIn(PKFile);
+        if (!fileIn.is_open()) {
+            cerr << "Ошибка: не удалось открыть файл PK.\n";
+            loker(tableName, json_table.Name); // Снимаем блокировку
+            return false;
+        }
 
-    fileIn >> currentPK;
-    fileIn.close();
+        fileIn >> currentPK;
+        fileIn.close();
 
-    ofstream fileOut(PKFile);
-    if (!fileOut.is_open()) {
-        cerr << "Не удалось открыть файл.\n";
-        return;
-    }
-    currentPK++;
-    fileOut << currentPK;
-    fileOut.close();
+        ofstream fileOut(PKFile);
+        if (!fileOut.is_open()) {
+            cerr << "Ошибка: не удалось записать в файл PK.\n";
+            loker(tableName, json_table.Name); // Снимаем блокировку
+            return false;
+        }
 
-    // Логика для определения количества существующих файлов
-    int csvNumber = findCsvFileCount(json_table, tableName);
+        currentPK++;
+        fileOut << currentPK;
+        fileOut.close();
 
-    string baseDir = "/home/b3d0la9a/don/Pract2SYBD/" + json_table.Name;
+        // Определяем номер текущего CSV файла
+        int csvNumber = findCsvFileCount(json_table, tableName);
 
-    // Используем новую функцию для создания нового CSV файла, если нужно
-    createNewCsvFile(baseDir, tableName, csvNumber, json_table);
+        // Путь к директории таблицы
+        string baseDir = "/home/b3d0la9a/don/Pract2SYBD/" + json_table.Name;
 
-    string csvSecond = baseDir + "/" + tableName + "/" + to_string(csvNumber) + ".csv";
+        // Создаём новый CSV файл при необходимости
+        createNewCsvFile(baseDir, tableName, csvNumber, json_table);
 
-    // Открываем CSV файл для записи
-    ofstream csv(csvSecond, ios::app);
-    if (!csv.is_open()) {
-        cerr << "Не удалось открыть файл.\n";
-        return;
-    }
+        // Путь к текущему CSV файлу
+        string csvSecond = baseDir + "/" + tableName + "/" + to_string(csvNumber) + ".csv";
 
-    // Записываем данные в CSV файл
-    csv << currentPK << ",";
-    for (int i = 0; i < values.size(); i++) {
-        if (values[i] == '\'') {
-            i++;
-            while (i < values.size() && values[i] != '\'') {
-                csv << values[i++];
-            }
-            if (i + 1 < values.size() && values[i + 1] != ')') {
-                csv << ",";
-            } else {
-                csv << endl;
+        // Открываем CSV файл для записи
+        ofstream csv(csvSecond, ios::app);
+        if (!csv.is_open()) {
+            cerr << "Ошибка: не удалось открыть CSV файл.\n";
+            loker(tableName, json_table.Name); // Снимаем блокировку
+            return false;
+        }
+
+        // Записываем данные в CSV файл
+        csv << currentPK << ",";
+        for (size_t i = 0; i < values.size(); ++i) {
+            if (values[i] == '\'') {
+                ++i;
+                while (i < values.size() && values[i] != '\'') {
+                    csv << values[i++];
+                }
+                if (i + 1 < values.size() && values[i + 1] != ')') {
+                    csv << ",";
+                } else {
+                    csv << endl;
+                }
             }
         }
-    }
 
-    csv.close();
-    loker(tableName, json_table.Name);
+        csv.close();
+        loker(tableName, json_table.Name); // Снимаем блокировку
+        return true; // Успешное выполнение
+    } catch (const std::exception& e) {
+        cerr << "Ошибка выполнения INSERT: " << e.what() << "\n";
+        return false; // В случае исключения возвращаем false
+    }
 }
+

@@ -30,17 +30,23 @@ void handle_client(int client_socket, TableJson& json_table) {
         // Выбор действия
         std::string response;
         if (command.find("INSERT") == 0) {
-            std::lock_guard<std::mutex> lock(db_mutex); // захватывает мьютекс на время работы с базой данных (только один поток работает)
-            insert(command, json_table);
-            response = "INSERT выполнено успешно\n";
+            std::lock_guard<std::mutex> lock(db_mutex); // Захватываем мьютекс
+            if (insert(command, json_table)) {
+                response = "INSERT выполнено успешно\n"; // Сообщение об успехе
+            } else {
+                response = "Ошибка выполнения INSERT\n"; // Сообщение об ошибке
+            }
         } else if (command.find("DELETE") == 0) {
             std::lock_guard<std::mutex> lock(db_mutex);
-            delet(command, json_table);
-            response = "DELETE выполнено успешно\n";
+            if (delet(command, json_table)) {
+                response = "DELETE выполнено успешно\n"; // Сообщение об успехе
+            } else {
+                response = "Ошибка выполнения\n"; // Сообщение об ошибке
+            }
         } else if (command.find("SELECT") == 0) {
             std::lock_guard<std::mutex> lock(db_mutex);
             select(command, json_table);
-            response = "SELECT выполнено успешно\n";
+            response = "SELECT считано\n";
         } else {
             response = "Неверная команда\n";
         }
@@ -56,15 +62,26 @@ int main() {
     TableJson json_table;
     parser(json_table);
 
-    int server_fd; // файловый дескриптор сокета, служит для подключения клиентов
-    int new_socket; // дескриптор сокета для конкретного подключения клиента
+    Node* temp = json_table.Tablehead;
+    while (temp) {
+        cout << "Таблица: " << temp->table << endl;
+        ListNode* column = temp->column;
+        while (column) {
+            cout << "  Колонка: " << column->column_name << endl;
+            column = column->next;
+        }
+        temp = temp->next;
+    }
+
+    int server_fd; // Служит для подключения клиентов   
+    int new_socket; // Нужен для конкретного подключения клиента
     struct sockaddr_in address; // структура, описывающая адрес сервера
     int opt = 1; // опция для настройки сокета
     int addrlen = sizeof(address); // размер структуры address
 
     // Создаем серверный сокет
     server_fd = socket(AF_INET, SOCK_STREAM, 0); // Используется IPv4 / Сокет работает через TCP / Протокол для TCP
-    if (server_fd == 0) {
+    if (server_fd == 0) {       
         perror("Ошибка создания сокета");
         exit(EXIT_FAILURE);
     }

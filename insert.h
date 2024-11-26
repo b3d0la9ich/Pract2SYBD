@@ -13,4 +13,4 @@ void copyNameColonk(const string& from_file, const string& to_file);
 void loker(const string& tableName, const string& schemeName);
 int findCsvFileCount(const TableJson& json_table, const string& tableName);
 void createNewCsvFile(const std::string& baseDir, const std::string& tableName, int& csvNumber, const TableJson& tableJson);
-void insert(const string& command, TableJson json_table);
+bool insert(const string& command, TableJson& json_table);
